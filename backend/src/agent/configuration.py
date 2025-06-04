@@ -28,6 +28,22 @@ class Configuration(BaseModel):
             "description": "The name of the language model to use for the agent's answer."
         },
     )
+    llm_provider: str = Field(
+        default="gemini",
+        metadata={"description": "The LLM provider to use, e.g., 'gemini' or 'deepseek'."}
+    )
+    deepseek_query_generator_model: str = Field(
+        default="deepseek-chat",
+        metadata={"description": "DeepSeek model for query generation."}
+    )
+    deepseek_reflection_model: str = Field(
+        default="deepseek-chat",
+        metadata={"description": "DeepSeek model for reflection."}
+    )
+    deepseek_answer_model: str = Field(
+        default="deepseek-chat",
+        metadata={"description": "DeepSeek model for answer generation."}
+    )
 
     number_of_initial_queries: int = Field(
         default=3,

@@ -29,10 +29,32 @@ Follow these steps to get the application running locally for development and te
 
 -   Node.js and npm (or yarn/pnpm)
 -   Python 3.8+
--   **`GEMINI_API_KEY`**: The backend agent requires a Google Gemini API key.
+
+**LLM Configuration**
+
+This project supports using different Large Language Models for its core functions. You can choose between Gemini and DeepSeek.
+
+***Environment Variables***
+
+To configure the LLM provider and models, set the following environment variables (e.g., in a `.env` file in the `backend` directory):
+
+*   `LLM_PROVIDER`: Set to `"deepseek"` to use DeepSeek models, or `"gemini"` to use Gemini models. Defaults to `"gemini"`.
+*   `GEMINI_API_KEY`: Your API key for Google Gemini. This is always required, even if using DeepSeek, as Google Search via Gemini is still used for web research capabilities.
+*   `QUERY_GENERATOR_MODEL`: The Gemini model for query generation (e.g., "gemini-1.0-pro").
+*   `REFLECTION_MODEL`: The Gemini model for reflection (e.g., "gemini-1.5-flash").
+*   `ANSWER_MODEL`: The Gemini model for answer generation (e.g., "gemini-1.5-pro").
+*   `DEEPSEEK_API_KEY`: Your API key for DeepSeek. Required if `LLM_PROVIDER` is `"deepseek"`.
+*   `DEEPSEEK_QUERY_GENERATOR_MODEL`: The DeepSeek model for query generation (e.g., "deepseek-chat").
+*   `DEEPSEEK_REFLECTION_MODEL`: The DeepSeek model for reflection (e.g., "deepseek-chat").
+*   `DEEPSEEK_ANSWER_MODEL`: The DeepSeek model for answer generation (e.g., "deepseek-chat").
+
+Refer to `backend/.env.example` for a template. The backend agent requires a Google Gemini API key for its web research capabilities.
     1.  Navigate to the `backend/` directory.
     2.  Create a file named `.env` by copying the `backend/.env.example` file.
-    3.  Open the `.env` file and add your Gemini API key: `GEMINI_API_KEY="YOUR_ACTUAL_API_KEY"`
+    3.  Open the `.env` file and add your API keys and desired model configurations. For example:
+        `GEMINI_API_KEY="YOUR_GEMINI_API_KEY"`
+        `DEEPSEEK_API_KEY="YOUR_DEEPSEEK_API_KEY"`
+        `LLM_PROVIDER="deepseek"`
 
 **2. Install Dependencies:**
 

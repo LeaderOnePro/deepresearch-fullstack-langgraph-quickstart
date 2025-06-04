@@ -24,6 +24,7 @@ from agent.prompts import (
     answer_instructions,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_deepseek import ChatDeepseek
 from agent.utils import (
     get_citations,
     get_research_topic,
@@ -33,8 +34,9 @@ from agent.utils import (
 
 load_dotenv()
 
-if os.getenv("GEMINI_API_KEY") is None:
+if os.getenv("GEMINI_API_KEY") is None: # This check remains as Gemini can still be used for web search
     raise ValueError("GEMINI_API_KEY is not set")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 
 # Used for Google Search API
 genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -60,13 +62,24 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     if state.get("initial_search_query_count") is None:
         state["initial_search_query_count"] = configurable.number_of_initial_queries
 
-    # init Gemini 2.0 Flash
-    llm = ChatGoogleGenerativeAI(
-        model=configurable.query_generator_model,
-        temperature=1.0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
-    )
+    if configurable.llm_provider == "deepseek":
+        if DEEPSEEK_API_KEY is None:
+            raise ValueError("DEEPSEEK_API_KEY is not set for llm_provider 'deepseek'")
+        llm = ChatDeepseek(
+            model=configurable.deepseek_query_generator_model,
+            temperature=1.0,
+            max_retries=2,
+            api_key=DEEPSEEK_API_KEY,
+        )
+    else:  # Default to gemini
+        if os.getenv("GEMINI_API_KEY") is None:
+            raise ValueError("GEMINI_API_KEY is not set for llm_provider 'gemini'")
+        llm = ChatGoogleGenerativeAI(
+            model=configurable.query_generator_model,
+            temperature=1.0,
+            max_retries=2,
+            api_key=os.getenv("GEMINI_API_KEY"),
+        )
     structured_llm = llm.with_structured_output(SearchQueryList)
 
     # Format the prompt
@@ -151,9 +164,8 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         Dictionary with state update, including search_query key containing the generated follow-up query
     """
     configurable = Configuration.from_runnable_config(config)
-    # Increment the research loop count and get the reasoning model
+    # Increment the research loop count
     state["research_loop_count"] = state.get("research_loop_count", 0) + 1
-    reasoning_model = state.get("reasoning_model") or configurable.reasoning_model
 
     # Format the prompt
     current_date = get_current_date()
@@ -162,13 +174,25 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         research_topic=get_research_topic(state["messages"]),
         summaries="\n\n---\n\n".join(state["web_research_result"]),
     )
-    # init Reasoning Model
-    llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
-        temperature=1.0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
-    )
+    # init LLM based on provider
+    if configurable.llm_provider == "deepseek":
+        if DEEPSEEK_API_KEY is None:
+            raise ValueError("DEEPSEEK_API_KEY is not set for llm_provider 'deepseek'")
+        llm = ChatDeepseek(
+            model=configurable.deepseek_reflection_model,
+            temperature=1.0,
+            max_retries=2,
+            api_key=DEEPSEEK_API_KEY,
+        )
+    else:  # Default to gemini
+        if os.getenv("GEMINI_API_KEY") is None:
+            raise ValueError("GEMINI_API_KEY is not set for llm_provider 'gemini'")
+        llm = ChatGoogleGenerativeAI(
+            model=configurable.reflection_model,
+            temperature=1.0,
+            max_retries=2,
+            api_key=os.getenv("GEMINI_API_KEY"),
+        )
     result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
 
     return {
@@ -231,7 +255,6 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         Dictionary with state update, including running_summary key containing the formatted final summary with sources
     """
     configurable = Configuration.from_runnable_config(config)
-    reasoning_model = state.get("reasoning_model") or configurable.reasoning_model
 
     # Format the prompt
     current_date = get_current_date()
@@ -241,13 +264,25 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         summaries="\n---\n\n".join(state["web_research_result"]),
     )
 
-    # init Reasoning Model, default to Gemini 2.5 Flash
-    llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
-        temperature=0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
-    )
+    # init LLM based on provider
+    if configurable.llm_provider == "deepseek":
+        if DEEPSEEK_API_KEY is None:
+            raise ValueError("DEEPSEEK_API_KEY is not set for llm_provider 'deepseek'")
+        llm = ChatDeepseek(
+            model=configurable.deepseek_answer_model,
+            temperature=0,
+            max_retries=2,
+            api_key=DEEPSEEK_API_KEY,
+        )
+    else:  # Default to gemini
+        if os.getenv("GEMINI_API_KEY") is None:
+            raise ValueError("GEMINI_API_KEY is not set for llm_provider 'gemini'")
+        llm = ChatGoogleGenerativeAI(
+            model=configurable.answer_model,
+            temperature=0,
+            max_retries=2,
+            api_key=os.getenv("GEMINI_API_KEY"),
+        )
     result = llm.invoke(formatted_prompt)
 
     # Replace the short urls with the original urls and add all used urls to the sources_gathered
