@@ -24,7 +24,7 @@ from agent.prompts import (
     answer_instructions,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_deepseek import ChatDeepseek
+from langchain_deepseek import ChatDeepSeek
 from agent.utils import (
     get_citations,
     get_research_topic,
@@ -65,7 +65,7 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     if configurable.llm_provider == "deepseek":
         if DEEPSEEK_API_KEY is None:
             raise ValueError("DEEPSEEK_API_KEY is not set for llm_provider 'deepseek'")
-        llm = ChatDeepseek(
+        llm = ChatDeepSeek(
             model=configurable.deepseek_query_generator_model,
             temperature=1.0,
             max_retries=2,
@@ -178,7 +178,7 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     if configurable.llm_provider == "deepseek":
         if DEEPSEEK_API_KEY is None:
             raise ValueError("DEEPSEEK_API_KEY is not set for llm_provider 'deepseek'")
-        llm = ChatDeepseek(
+        llm = ChatDeepSeek(
             model=configurable.deepseek_reflection_model,
             temperature=1.0,
             max_retries=2,
@@ -268,7 +268,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     if configurable.llm_provider == "deepseek":
         if DEEPSEEK_API_KEY is None:
             raise ValueError("DEEPSEEK_API_KEY is not set for llm_provider 'deepseek'")
-        llm = ChatDeepseek(
+        llm = ChatDeepSeek(
             model=configurable.deepseek_answer_model,
             temperature=0,
             max_retries=2,

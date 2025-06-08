@@ -1,5 +1,18 @@
 # Testing Plan: LLM Provider Integration
 
+## Important: Verifying Backend Startup
+
+Before running UI or API tests, always ensure the backend server starts without errors:
+
+1.  Navigate to the `backend` directory.
+2.  Run the command to start the backend server (e.g., `make dev` or your project's specific command).
+3.  **Check the console output carefully for any error messages, especially `ImportError`s.**
+4.  Confirm you see a message like `Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)`.
+
+If the backend fails to start, subsequent tests will also fail. Address backend startup errors first.
+
+---
+
 **Objective:** Verify that the LLM provider and model selection works correctly in the frontend and is respected by the backend.
 
 **Prerequisites:**
