@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { SquarePen, Brain, Send, StopCircle, Zap, Cpu } from "lucide-react";
+import { SquarePen, Brain, Send, StopCircle, Zap, Cpu, Server } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -18,6 +18,22 @@ interface InputFormProps {
   hasHistory: boolean;
 }
 
+interface LlmConfig {
+  llm_provider: string;
+  gemini_query_generator_model: string;
+  gemini_reflection_model: string;
+  gemini_answer_model: string;
+  deepseek_query_generator_model: string;
+  deepseek_reflection_model: string;
+  deepseek_answer_model: string;
+}
+
+interface AvailableModel {
+  value: string;
+  label: string;
+  icon?: React.ReactNode;
+}
+
 export const InputForm: React.FC<InputFormProps> = ({
   onSubmit,
   onCancel,
@@ -26,7 +42,74 @@ export const InputForm: React.FC<InputFormProps> = ({
 }) => {
   const [internalInputValue, setInternalInputValue] = useState("");
   const [effort, setEffort] = useState("medium");
-  const [model, setModel] = useState("gemini-2.5-flash-preview-04-17");
+  const [model, setModel] = useState(""); // Will be set by useEffect
+  const [llmProvider, setLlmProvider] = useState("");
+  const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
+  const [configLoaded, setConfigLoaded] = useState(false);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch("/api/llm-config");
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data: LlmConfig = await response.json();
+
+        setLlmProvider(data.llm_provider);
+        let models: AvailableModel[] = [];
+
+        if (data.llm_provider === "gemini") {
+          models = [
+            {
+              value: data.gemini_query_generator_model,
+              label: "Query Gen (Gemini)",
+              icon: <Zap className="h-4 w-4 mr-2 text-yellow-400" />,
+            },
+            {
+              value: data.gemini_reflection_model,
+              label: "Reflection (Gemini)",
+              icon: <Zap className="h-4 w-4 mr-2 text-orange-400" />,
+            },
+            {
+              value: data.gemini_answer_model,
+              label: "Answer Gen (Gemini)",
+              icon: <Cpu className="h-4 w-4 mr-2 text-purple-400" />,
+            },
+          ];
+        } else if (data.llm_provider === "deepseek") {
+          models = [
+            {
+              value: data.deepseek_query_generator_model,
+              label: "Query Gen (DeepSeek)",
+              icon: <Server className="h-4 w-4 mr-2 text-green-400" />,
+            },
+            {
+              value: data.deepseek_reflection_model,
+              label: "Reflection (DeepSeek)",
+              icon: <Server className="h-4 w-4 mr-2 text-teal-400" />,
+            },
+            {
+              value: data.deepseek_answer_model,
+              label: "Answer Gen (DeepSeek)",
+              icon: <Server className="h-4 w-4 mr-2 text-cyan-400" />,
+            },
+          ];
+        }
+        setAvailableModels(models);
+        if (models.length > 0) {
+          setModel(models[0].value); // Set default model to the first in the list
+        }
+        setConfigLoaded(true);
+      } catch (error) {
+        console.error("Failed to fetch LLM configuration:", error);
+        // Optionally, set some default models or show an error state
+        setConfigLoaded(true); // Still set to true to unblock UI, but with defaults/error
+      }
+    };
+
+    fetchConfig();
+  }, []); // Empty dependency array means this effect runs once on mount
 
   const handleInternalSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -129,37 +212,29 @@ export const InputForm: React.FC<InputFormProps> = ({
           <div className="flex flex-row gap-2 bg-neutral-700 border-neutral-600 text-neutral-300 focus:ring-neutral-500 rounded-xl rounded-t-sm pl-2  max-w-[100%] sm:max-w-[90%]">
             <div className="flex flex-row items-center text-sm ml-2">
               <Cpu className="h-4 w-4 mr-2" />
-              Model
+              Model {llmProvider && `(${llmProvider.charAt(0).toUpperCase() + llmProvider.slice(1)})`}
             </div>
-            <Select value={model} onValueChange={setModel}>
-              <SelectTrigger className="w-[150px] bg-transparent border-none cursor-pointer">
-                <SelectValue placeholder="Model" />
+            <Select value={model} onValueChange={setModel} disabled={!configLoaded || availableModels.length === 0}>
+              <SelectTrigger className="w-[220px] bg-transparent border-none cursor-pointer">
+                <SelectValue placeholder={configLoaded ? "Select model" : "Loading models..."} />
               </SelectTrigger>
               <SelectContent className="bg-neutral-700 border-neutral-600 text-neutral-300 cursor-pointer">
-                <SelectItem
-                  value="gemini-2.0-flash"
-                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
-                >
-                  <div className="flex items-center">
-                    <Zap className="h-4 w-4 mr-2 text-yellow-400" /> 2.0 Flash
-                  </div>
-                </SelectItem>
-                <SelectItem
-                  value="gemini-2.5-flash-preview-04-17"
-                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
-                >
-                  <div className="flex items-center">
-                    <Zap className="h-4 w-4 mr-2 text-orange-400" /> 2.5 Flash
-                  </div>
-                </SelectItem>
-                <SelectItem
-                  value="gemini-2.5-pro-preview-05-06"
-                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
-                >
-                  <div className="flex items-center">
-                    <Cpu className="h-4 w-4 mr-2 text-purple-400" /> 2.5 Pro
-                  </div>
-                </SelectItem>
+                {availableModels.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                  >
+                    <div className="flex items-center">
+                      {option.icon} {option.label}
+                    </div>
+                  </SelectItem>
+                ))}
+                {configLoaded && availableModels.length === 0 && (
+                  <SelectItem value="no-models" disabled>
+                    No models available. Check config.
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>

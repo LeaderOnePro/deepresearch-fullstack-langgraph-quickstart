@@ -3,9 +3,36 @@ import pathlib
 from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 import fastapi.exceptions
+from pydantic import BaseModel
+
+from agent.configuration import Configuration
 
 # Define the FastAPI app
 app = FastAPI()
+
+# Pydantic model for the LLM configuration response
+class LlmConfigResponse(BaseModel):
+    llm_provider: str
+    gemini_query_generator_model: str
+    gemini_reflection_model: str
+    gemini_answer_model: str
+    deepseek_query_generator_model: str
+    deepseek_reflection_model: str
+    deepseek_answer_model: str
+
+@app.get("/api/llm-config", response_model=LlmConfigResponse)
+async def get_llm_config():
+    """Returns the current LLM configuration."""
+    config = Configuration()
+    return LlmConfigResponse(
+        llm_provider=config.llm_provider,
+        gemini_query_generator_model=config.query_generator_model, # Note: field name mismatch from Configuration
+        gemini_reflection_model=config.reflection_model, # Note: field name mismatch from Configuration
+        gemini_answer_model=config.answer_model, # Note: field name mismatch from Configuration
+        deepseek_query_generator_model=config.deepseek_query_generator_model,
+        deepseek_reflection_model=config.deepseek_reflection_model,
+        deepseek_answer_model=config.deepseek_answer_model,
+    )
 
 
 def create_frontend_router(build_dir="../frontend/dist"):
