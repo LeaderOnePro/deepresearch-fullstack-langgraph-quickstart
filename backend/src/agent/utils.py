@@ -1,5 +1,8 @@
 from typing import Any, Dict, List
 from langchain_core.messages import AnyMessage, AIMessage, HumanMessage
+import os
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_deepseek import ChatDeepseek
 
 
 def get_research_topic(messages: List[AnyMessage]) -> str:
@@ -164,3 +167,32 @@ def get_citations(response, resolved_urls_map):
                     pass
         citations.append(citation)
     return citations
+
+
+def get_llm_client(model_name: str, temperature: float = 0.0) -> Any:
+    """
+    Factory function to get an LLM client based on the model name.
+
+    Args:
+        model_name: The name of the language model to use.
+        temperature: The temperature to use for the model.
+
+    Returns:
+        An instance of the LLM client.
+    """
+
+    if "deepseek" in model_name:
+        return ChatDeepseek(
+            model=model_name,
+            temperature=temperature,
+            max_retries=2,
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
+        )
+    # Default to Google Generative AI
+    else:
+        return ChatGoogleGenerativeAI(
+            model=model_name,
+            temperature=temperature,
+            max_retries=2,
+            api_key=os.getenv("GEMINI_API_KEY"),
+        )

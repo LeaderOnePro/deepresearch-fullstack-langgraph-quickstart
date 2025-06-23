@@ -30,6 +30,7 @@ from agent.utils import (
     get_research_topic,
     insert_citation_markers,
     resolve_urls,
+    get_llm_client,
 )
 
 load_dotenv()
@@ -61,24 +62,6 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     if state.get("initial_search_query_count") is None:
         state["initial_search_query_count"] = configurable.number_of_initial_queries
 
-    # init LLM
-    if "deepseek" in configurable.query_generator_model:
-        llm = ChatDeepseek(
-            model=configurable.query_generator_model,
-            temperature=1.0,
-            max_retries=2,
-            api_key=os.getenv("DEEPSEEK_API_KEY"),
-        )
-    else:
-        llm = ChatGoogleGenerativeAI(
-            model=configurable.query_generator_model,
-            temperature=1.0,
-            max_retries=2,
-            api_key=os.getenv("GEMINI_API_KEY"),
-        )
-
-    structured_llm = llm.with_structured_output(SearchQueryList)
-
     # Format the prompt
     current_date = get_current_date()
     formatted_prompt = query_writer_instructions.format(
@@ -87,8 +70,10 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
         number_queries=state["initial_search_query_count"],
     )
     # Generate the search queries
+    llm = get_llm_client(configurable.query_generator_model, temperature=1.0)
+    structured_llm = llm.with_structured_output(SearchQueryList)
     result = structured_llm.invoke(formatted_prompt)
-    return {"search_query": result.query}
+    return {"query_list": result.query}
 
 
 def continue_to_web_research(state: QueryGenerationState):
@@ -173,20 +158,7 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         summaries="\n\n---\n\n".join(state["web_research_result"]),
     )
     # init Reasoning Model
-    if "deepseek" in reasoning_model:
-        llm = ChatDeepseek(
-            model=reasoning_model,
-            temperature=1.0,
-            max_retries=2,
-            api_key=os.getenv("DEEPSEEK_API_KEY"),
-        )
-    else:
-        llm = ChatGoogleGenerativeAI(
-            model=reasoning_model,
-            temperature=1.0,
-            max_retries=2,
-            api_key=os.getenv("GEMINI_API_KEY"),
-        )
+    llm = get_llm_client(reasoning_model, temperature=1.0)
     result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
 
     return {
@@ -260,33 +232,9 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     )
 
     # init Reasoning Model, default to Gemini 2.5 Flash
-    if "deepseek" in reasoning_model:
-        llm = ChatDeepseek(
-            model=reasoning_model,
-            temperature=0,
-            max_retries=2,
-            api_key=os.getenv("DEEPSEEK_API_KEY"),
-        )
-    else:
-        llm = ChatGoogleGenerativeAI(
-            model=reasoning_model,
-            temperature=0,
-            max_retries=2,
-            api_key=os.getenv("GEMINI_API_KEY"),
-
-    # Replace the short urls with the original urls and add all used urls to the sources_gathered
-    unique_sources = []
-    for source in state["sources_gathered"]:
-        if source["short_url"] in result.content:
-            result.content = result.content.replace(
-                source["short_url"], source["value"]
-            )
-            unique_sources.append(source)
-
-    return {
-        "messages": [AIMessage(content=result.content)],
-        "sources_gathered": unique_sources,
-    }
+    llm = get_llm_client(reasoning_model, temperature=0)
+    result = llm.invoke(formatted_prompt)
+    return {"messages": [AIMessage(content=result.content)]}
 
 
 # Create our Agent Graph
