@@ -159,6 +159,22 @@ export const InputForm: React.FC<InputFormProps> = ({
                     <Cpu className="h-4 w-4 mr-2 text-purple-400" /> 2.5 Pro
                   </div>
                 </SelectItem>
+                <SelectItem
+                  value="deepseek-chat"
+                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                >
+                  <div className="flex items-center">
+                    <Zap className="h-4 w-4 mr-2 text-green-400" /> DeepSeek Chat
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="deepseek-reasoner"
+                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                >
+                  <div className="flex items-center">
+                    <Cpu className="h-4 w-4 mr-2 text-blue-400" /> DeepSeek Reasoner
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
